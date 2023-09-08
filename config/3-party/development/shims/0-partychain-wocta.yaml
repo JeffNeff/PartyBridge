@@ -1,0 +1,62 @@
+#  kubectl expose deployment partyshim-partychain-wocta --type=LoadBalancer --name=partyshim-partychain-wocta
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: partyshim-partychain-wocta
+    component: cache
+  name: partyshim-partychain-wocta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: partyshim-partychain-wocta
+  template:
+    metadata:
+      labels:
+        name: partyshim-partychain-wocta
+        component: cache
+    spec:
+      containers:
+      - name: partyshim-partychain-wocta
+        image: gcr.io/mineonlium/partyshim@sha256:6bd492e6a961181044dd95977425760bed55b7c9534cce83c69d22dae2c55c5a
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: interface
+        env:
+        - name: PRIVATE_KEY
+          value: ""
+        - name: DEFAULT_PAYMENT_PRIVATE_KEY
+          value: ""
+        - name: RPC_URL
+          value:  "http://143.42.255.242:8545"
+        - name: RPC_URL2
+          value: "https://rpc.octa.space"
+        - name: CONTRACT_ADDRESS
+          value: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+        - name: SHIM_CA_CERT
+          value: "/etc/tls"
+        volumeMounts:
+        - name: mtls-secret
+          mountPath: "/etc/tls"
+          readOnly: true
+      volumes:
+      - name: mtls-secret
+        secret:
+          secretName: mtls-secret
+# --- 
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: partyshim-partychain-wocta
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app: partyshim-partychain-wocta
+#   ports:
+#     - protocol: TCP
+#       name: interface
+#       port: 80
+#       targetPort: 8080

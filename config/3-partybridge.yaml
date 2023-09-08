@@ -1,0 +1,83 @@
+# kubectl  expose deployment partybridge --type=LoadBalancer --name=partybridgelb-prod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partybridge
+  labels:
+    app: partybridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partybridge
+  template:
+    metadata:
+      labels:
+        app: partybridge
+    spec:
+      containers:
+        - name: partybridge
+          image: ko://github.com/TeaPartyCrypto/partybridge/cmd/partybridge
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+            - containerPort: 30003
+          volumeMounts:
+            - name: mtls-certs
+              mountPath: /app/certs
+              readOnly: true
+          env:
+            - name: PARTY_CHAIN_1
+              value: https://tea.mining4people.com/rpc
+            - name: PARTY_CHAIN_2
+              value: https://tea.mining4people.com/rpc
+            - name: OCT_RPC_1
+              value: "https://rpc.octa.space"
+            - name: OCT_RPC_2
+              value: "https://rpc.octa.space"
+            - name: REDIS_ADDRESS
+              value: 192.168.50.91:6379
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: REDIS_DB
+              value: "0"
+            - name: DEV
+              value: "false"
+            - name: WATCH
+              value: "false"
+            - name: PRIVATE_KEY
+              value: ""
+            - name: WGRAMS_SHIM_SERVER_ADDRESS
+              value: partyshim-wgrams:8080
+            - name: WOCTA_SHIM_SERVER_ADDRESS
+              value: partyshim-partychain-wocta:8080
+            - name: SHIM_CA_CERT
+              value: "/app/certs"
+      volumes:
+        - name: mtls-certs
+          secret:
+            secretName: mtls-secret
+
+# ---
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: partybridge
+# spec:
+#   selector:
+#     app: partybridge
+#   ports:
+#     - port: 80
+#       protocol: TCP
+#       targetPort: 8080
+#       name: interface
+#     - port: 30003
+#       protocol: TCP
+#       targetPort: 30003
+#       name: p2p
+# status:
+#   loadBalancer: {}
+
+
+# ---

@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  partyshim_wgrams:
+    image: gcr.io/mineonlium/partyshim@sha256:0fd350acb462f9e5bd94931984ab9b251ba5e4d6257ddbdaab49caeb76d613be
+    ports:
+      - 8080
+    environment:
+      PRIVATE_KEY: ""
+      DEFAULT_PAYMENT_PRIVATE_KEY: ""
+      RPC_URL: "https://rpc.octa.space"
+      RPC_URL2: "https://tea.mining4people.com/rpc"
+      CONTRACT_ADDRESS: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+      SHIM_CA_CERT: "/etc/tls"
+    volumes:
+      - ./tls/ca.crt:/etc/tls/ca.crt:ro
+      - ./tls/client.crt:/etc/tls/client.crt:ro
+      - ./tls/client.key:/etc/tls/client.key:ro
+      - ./tls/server.crt:/etc/tls/server.crt:ro
+      - ./tls/server.key:/etc/tls/server.key:ro
+
+  partyshim_partychain_wocta:
+    image: gcr.io/mineonlium/partyshim@sha256:0fd350acb462f9e5bd94931984ab9b251ba5e4d6257ddbdaab49caeb76d613be
+    ports:
+      - "8080"
+    environment:
+      PRIVATE_KEY: ""
+      DEFAULT_PAYMENT_PRIVATE_KEY: ""
+      RPC_URL: "https://tea.mining4people.com/rpc"
+      RPC_URL2: "https://rpc.octa.space"
+      CONTRACT_ADDRESS: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+      SHIM_CA_CERT: "/etc/tls"
+    volumes:
+      - ./tls/ca.crt:/etc/tls/ca.crt:ro
+      - ./tls/client.crt:/etc/tls/client.crt:ro
+      - ./tls/client.key:/etc/tls/client.key:ro
+      - ./tls/server.crt:/etc/tls/server.crt:ro
+      - ./tls/server.key:/etc/tls/server.key:ro
+    
+
+  bridgebarrel:
+    image: redis
+    ports:
+      - "6379"
+    environment:
+      MASTER: "true"
+      
+# # UI interface for redis
+#   bridge_commander:
+#     image: rediscommander/redis-commander:latest
+#     ports:
+#       - "8081:8081"
+#     environment:
+#       REDIS_HOSTS: local:bridgebarrel:6379
+
+  partybridge:
+    image: jeffthenaef/pb
+    ports:
+      - "8082:8080"
+      - "30003:30003"
+    environment:
+      PARTY_CHAIN_1: https://tea.mining4people.com/rpc
+      PARTY_CHAIN_2: https://tea.mining4people.com/rpc
+      OCTA_RPC_1: "https://rpc.octa.space"
+      OCTA_RPC_2: "https://rpc.octa.space"
+      REDIS_ADDRESS: bridgebarrel:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      DEV: "false"
+      WATCH: "true"
+      PRIVATE_KEY: ""
+      WGRAMS_SHIM_SERVER_ADDRESS: "partyshim_wgrams:8080"
+      WOCTA_SHIM_SERVER_ADDRESS: "partyshim_partychain_wocta:8080"
+      SHIM_CA_CERT: "/etc/tls"
+      FEE: 0
+      MINIMUM_AMOUNT: 0
+      WGRAMS_ON_OCTA_CONTRACT_ADDRESS: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+      WOCTA_ON_PARTYCHAIN_CONTRACT_ADDRESS: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+    volumes:
+      - ./tls/ca.crt:/etc/tls/ca.crt:ro
+      - ./tls/client.crt:/etc/tls/client.crt:ro
+      - ./tls/client.key:/etc/tls/client.key:ro
+      - ./tls/server.crt:/etc/tls/server.crt:ro
+      - ./tls/server.key:/etc/tls/server.key:ro
+
+  # ui:
+  #   image: gcr.io/mineonlium/partybridgeui@sha256:59cd85588943754628c9e67fe7312502246f35427da91525ea7868b3980807c0
+  #   ports:
+  #     - "8080:8080"

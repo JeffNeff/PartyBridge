@@ -1,0 +1,62 @@
+#  kubectl expose deployment partyshim-wgrams --type=LoadBalancer --name=partyshim-wgrams
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: partyshim-wgrams
+    component: cache
+  name: partyshim-wgrams
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: partyshim-wgrams
+  template:
+    metadata:
+      labels:
+        name: partyshim-wgrams
+        component: cache
+    spec:
+      containers:
+      - name: partyshim-wgrams
+        image: gcr.io/mineonlium/partyshim@sha256:07786400520ceade68d01972a9602d1d3da6b6e7a9e897c3d8fdf4e104d275b3
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: interface
+        env:
+        - name: PRIVATE_KEY
+          value: ""
+        - name: DEFAULT_PAYMENT_PRIVATE_KEY
+          value: ""
+        - name: RPC_URL
+          value: "https://rpc.octa.space"
+        - name: RPC_URL2
+          value: "http://143.42.255.242:8545"
+        - name: CONTRACT_ADDRESS
+          value: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+        - name: SHIM_CA_CERT
+          value: "/etc/tls"
+        volumeMounts:
+        - name: mtls-secret
+          mountPath: "/etc/tls"
+          readOnly: true
+      volumes:
+      - name: mtls-secret
+        secret:
+          secretName: mtls-secret
+# --- 
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: partyshim-wgrams
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app: partyshim-wgrams
+#   ports:
+#     - protocol: TCP
+#       name: interface
+#       port: 80
+#       targetPort: 8080

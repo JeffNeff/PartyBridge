@@ -1,0 +1,49 @@
+#  kubectl expose deployment partyshim-wgrams --type=LoadBalancer --name=partyshim-wgrams
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: partyshim-wgrams
+    component: cache
+  name: partyshim-wgrams
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: partyshim-wgrams
+  template:
+    metadata:
+      labels:
+        name: partyshim-wgrams
+        component: cache
+    spec:
+      containers:
+      - name: partyshim-wgrams
+        image: docker.io/jeffthenaef/shm
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: interface
+        env:
+        - name: PRIVATE_KEY
+          value: "2e46a81d3f3ea3646fcef0e4ea12bf471ec43c29960cbf1123885a2dfc7bc197"
+        - name: DEFAULT_PAYMENT_PRIVATE_KEY
+          value: "2e46a81d3f3ea3646fcef0e4ea12bf471ec43c29960cbf1123885a2dfc7bc197"
+        - name: BSC_GAS_PAYER_PRIVATE_KEY
+          value: "b63ae4d7508667d3545d941767ba60c08a717ec18eed822c3ace93ba66bc115c"
+        - name: RPC_URL
+          value: "https://rpc.octa.space"
+        - name: RPC_URL2
+          value: "http://143.42.255.242:8545"
+        - name: CONTRACT_ADDRESS
+          value: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+        - name: SHIM_CA_CERT
+          value: "/etc/tls"
+        volumeMounts:
+        - name: mtls-secret
+          mountPath: "/etc/tls"
+          readOnly: true
+      volumes:
+      - name: mtls-secret
+        secret:
+          secretName: mtls-secret

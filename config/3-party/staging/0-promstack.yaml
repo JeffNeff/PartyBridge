@@ -1,0 +1,237 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus
+        ports:
+        - containerPort: 9090
+        resources:
+          requests:
+            memory: "400Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: prometheus-data
+          mountPath: /prometheus
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: alert-rules-config
+          mountPath: /etc/alertmanager
+      volumes:
+      - name: prometheus-data
+        emptyDir: {}
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: alert-rules-config
+        configMap:
+          name: alert-rules-config
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 80
+    targetPort: 9090
+  type: LoadBalancer
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets:
+          - 'alertmanager:9093'
+
+    rule_files:
+      - '/etc/alertmanager/rules.yml'
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        scrape_interval: 5s
+        static_configs:
+          - targets: ['localhost:9090', 'partybridge:8080']
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-rules-config
+
+data:
+  rules.yml: |-
+    groups:
+    - name: bridge
+      rules:
+
+      - alert: BridgeRequest
+        expr: increase(bridge_requests_total{status="success"}[1m]) > 0
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "Bridge request success, asset: {{ $labels.asset }}, fromChain: {{ $labels.fromChain }}, bridgeTo: {{ $labels.bridgeTo }} "
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager
+        ports:
+        - containerPort: 9093
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "100m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: alertmanager-data
+          mountPath: /data
+        - name: alertmanager-config
+          mountPath: /etc/alertmanager
+      volumes:
+      - name: alertmanager-data
+        emptyDir: {}
+      - name: alertmanager-config
+        configMap:
+          name: alertmanager-config
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+
+spec:
+  selector:
+    app: alertmanager
+  ports:
+  - port: 80
+    targetPort: 9093
+  type: LoadBalancer
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+
+data:
+  alertmanager.yml: |-
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname', 'job']
+      receiver: discord
+
+    receivers:
+    - name: discord
+      discord_configs:
+      - webhook_url: 'https://discord.com/api/webhooks/1135593637300928522/eabPD2xT7FVseGStgmxhc2UiuyH4NXebL3VDEqo5vwjy978omG1DA2JMG13JDRXT-MuB'
+        send_resolved: false
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "100m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer

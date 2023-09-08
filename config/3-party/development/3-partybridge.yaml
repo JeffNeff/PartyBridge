@@ -1,0 +1,82 @@
+# kubectl  expose deployment partybridge --type=LoadBalancer --name=partybridgelb-prod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partybridge
+  labels:
+    app: partybridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partybridge
+  template:
+    metadata:
+      labels:
+        app: partybridge
+    spec:
+      containers:
+        - name: partybridge
+          image: gcr.io/mineonlium/partybridge@sha256:63906b16aa3f572d8dc6016fb405eeddc166525bfe271a45bc0c24335d7db649
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+            - containerPort: 30003
+          volumeMounts:
+            - name: mtls-certs
+              mountPath: /app/certs
+              readOnly: true
+          env:
+            - name: PARTY_CHAIN_1
+              value: http://10.128.54.77:8545
+            - name: PARTY_CHAIN_2
+              value: http://10.128.54.77:8545
+            - name: OCT_RPC_1
+              value: http://10.128.89.241:8545
+            - name: OCT_RPC_2
+              value: http://10.128.89.241:8545
+            - name: REDIS_ADDRESS
+              value: bridgebarrel:6379
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: REDIS_DB
+              value: "0"
+            - name: DEV
+              value: "false"
+            - name: WATCH
+              value: "true"
+            - name: PRIVATE_KEY
+              value: ""
+            - name: WGRAMS_SHIM_SERVER_ADDRESS
+              value: partyshim-wgrams:8080
+            - name: WOCTA_SHIM_SERVER_ADDRESS
+              value: partyshim-partychain-wocta:8080
+            - name: SHIM_CA_CERT
+              value: "/app/certs"
+      volumes:
+        - name: mtls-certs
+          secret:
+            secretName: mtls-secret
+# ---
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: partybridge
+# spec:
+#   selector:
+#     app: partybridge
+#   ports:
+#     - port: 80
+#       protocol: TCP
+#       targetPort: 8080
+#       name: interface
+#     - port: 30003
+#       protocol: TCP
+#       targetPort: 30003
+#       name: p2p
+# status:
+#   loadBalancer: {}
+
+
+# ---

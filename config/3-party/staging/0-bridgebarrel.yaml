@@ -1,0 +1,66 @@
+# kubectl expose deployment bridgebarrel --type=LoadBalancer --name=bridgebarrel
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bridgebarrel-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 40Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: bridgebarrel
+    component: cache
+  name: bridgebarrel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: bridgebarrel
+  template:
+    metadata:
+      labels:
+        name: bridgebarrel
+        component: cache
+    spec:
+      containers:
+      - name: bridgebarrel
+        image: redis
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 6379
+          name: redis
+        env:
+        - name: MASTER
+          value: "true"
+        volumeMounts:
+        - name: bridgebarrel-data
+          mountPath: /data
+      volumes:
+      - name: bridgebarrel-data
+        persistentVolumeClaim:
+          claimName: bridgebarrel-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: bridgebarrel
+spec:
+  selector:
+    name: bridgebarrel
+  ports:
+    - port: 6379
+      protocol: TCP
+      targetPort: 6379
+      name: bridgebarrel
+status:
+  loadBalancer: {}

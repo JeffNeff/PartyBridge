@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partybridge-ui
+  labels:
+    app: partybridge-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partybridge-ui
+  template:
+    metadata:
+      labels:
+        app: partybridge-ui
+    spec:
+      containers:
+        - name: partybridge-ui
+          image: gcr.io/mineonlium/partybridgeui@sha256:9e0274a4bba6c869abb9b4959db2dfaf8600c6848f06b88e748c6f5850e47259
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: partybridge-ui
+spec:
+  selector:
+    app: partybridge-ui
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8081

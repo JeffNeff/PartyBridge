@@ -1,0 +1,38 @@
+# kubectl expose deployment bridge-comannder --type=LoadBalancer --name=bridgecommander
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: ./kompose convert
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: bridge-comannder
+  name: bridge-comannder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: bridge-comannder
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: ./kompose convert
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: bridge-comannder
+    spec:
+      containers:
+        - env:
+            - name: REDIS_HOSTS
+              value: local:bridgebarrel:6379
+          image: rediscommander/redis-commander:latest
+          name: bridge-comannder
+          ports:
+            - containerPort: 8081
+          resources: {}
+      hostname: bridge-comannder
+      restartPolicy: Always
+status: {}

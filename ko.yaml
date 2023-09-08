@@ -1,0 +1,153 @@
+# kubectl  expose deployment partybridge --type=LoadBalancer --name=partybridgelb-prod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partybridge
+  labels:
+    app: partybridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partybridge
+  template:
+    metadata:
+      labels:
+        app: partybridge
+    spec:
+      containers:
+        - name: partybridge
+          image: ko://github.com/TeaPartyCrypto/partybridge/cmd/partybridge
+          # image: jeffthenaef/pb@sha256:cc46137c7f302009c38fb7893380911e75c35e3237c76fdc849003b48216941a
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+          volumeMounts:
+            - name: mtls-certs
+              mountPath: /app/certs
+              readOnly: true
+            - name: partybridge-io-tls
+              mountPath: /app/certs/tls
+              readOnly: true
+          env:
+            - name: PARTY_CHAIN_1
+              value: http://185.3.92.181:8545
+            - name: PARTY_CHAIN_2
+              value: http://185.3.92.181:8545
+            - name: OCTA_RPC_1
+              value: http://139.144.159.240:8545
+            - name: OCTA_RPC_2
+              value: http://139.144.159.240:8545
+            - name: REDIS_ADDRESS
+              value: bridgebarrel:6379
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: REDIS_DB
+              value: "0"
+            - name: DEV
+              value: "false"
+            - name: WATCH
+              value: "true"
+            - name: PRIVATE_KEY
+              value: "8979a1ddf10d83c3454c28afa0cdc3ef75c0d59a0ad12da7f245ba35cc1a98ab"
+            - name: WGRAMS_SHIM_SERVER_ADDRESS
+              value: partyshim-wgrams:8080
+            - name: WOCTA_SHIM_SERVER_ADDRESS
+              value: partyshim-partychain-wocta:8080
+            - name: WBSCUSDT_OCTA_SPACE_SHIM_SERVER_ADDRESS
+              value: partyshim-octaspace-bscusdt8080
+            - name: WBSCUSDT_PARTY_CHAIN_SHIM_SERVER_ADDRESS
+              value: partyshim-partychain-bscusdt:8080
+            - name: WGRAMS_ON_OCTA_CONTRACT_ADDRESS
+              value: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+            - name: WOCTA_ON_PARTYCHAIN_CONTRACT_ADDRESS
+              value: "0xa013e56ed460eCAaE5dc4c5019b2c8470aC09441"
+            - name: WBSCUSDT_ON_PARTYCHAIN_CONTRACT_ADDRESS
+              value: "0x3fDAf375a16E2806B68F260b6EFab02D42Af948e"
+            - name: WBSCUSDT_ON_OCTA_CONTRACT_ADDRESS
+              value: "0x541e16D0ef928d2068fCd3192b33E8F25077B22D"
+            - name: SERVER_SSL_CRT_FILE_PATH
+              value: "/app/certs/tls/tls.crt"
+            - name: SERVER_SSL_KEY_FILE_PATH
+              value: "/app/certs/tls/tls.key"
+            - name: SHIM_CA_CERT
+              value: "/app/certs"
+            - name: MINIMUM_AMOUNT
+              value: "0"
+            - name: FEE
+              value: "0"
+      volumes:
+        - name: mtls-certs
+          secret:
+            secretName: mtls-secret
+        - name: partybridge-io-tls
+          secret:
+            secretName: partybridge-io-tls-wss
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: partybridge
+spec:
+  type: LoadBalancer
+  selector:
+    app: partybridge
+  ports:
+    - protocol: TCP
+      name: wss
+      port: 80
+      targetPort: 8081
+    - protocol: TCP
+      name: ssl
+      port: 443
+      targetPort: 8080
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: partybridge-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - testing.partybridge.io
+    secretName: partybridge-io-tls
+  rules:
+  - host: testing.partybridge.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: partybridge-ui
+            port:
+              number: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: partybridge-ingress-wss
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - wss.partybridge.io
+    secretName: partybridge-io-tls-wss
+  rules:
+  - host: wss.partybridge.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: partybridge
+            port:
+              number: 80
